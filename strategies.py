@@ -30,7 +30,13 @@ class Strategies():
                 data.cash -= fund_fee
                 data.df.loc[index, 'Fund_Annual_Cost'] = fund_fee  
         
-        def s_basic(self, strategy_name = 'basic'):
+        
+        def run_strategies(self):
+        
+            self.fully_invested_strat()
+            self.sell_high_buy_low_start()
+        
+        def fully_invested_strat(self, strategy_name = 'fi'):
         
             #Make copy to avoid changing attributes of original data object.
             data = deepcopy(self.data)
@@ -58,7 +64,7 @@ class Strategies():
             self.data.add_column(data.df['Cash'], strategy_name + '_Cash')
             self.data.add_column(data.df['Stock'],strategy_name + '_Stock')
             
-        def s_1(self, strategy_name = 's_1'):
+        def sell_high_buy_low_start(self, strategy_name = 'shbl'):
             
             #Make copy to avoid changing attributes of original data object.
             data = deepcopy(self.data)
