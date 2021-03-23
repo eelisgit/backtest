@@ -42,7 +42,8 @@ class Data_Handler():
                 cost_basis = self.capital_invested / self.shares
                 capital_tax_amount = max((row.Price - cost_basis) * shares_sold * self.capital_tax, 0)
                 money_received = shares_sold*row.Price - capital_tax_amount
-                self.capital_invested -= shares_sold*row.Price
+                #self.capital_invested -= shares_sold*row.Price
+                self.capital_invested -= shares_sold*cost_basis
                 self.cash = self.cash + money_received
                 self.shares = self.shares - shares_sold
                 self.df.loc[index, 'Capital_Gains_Tax'] = capital_tax_amount
@@ -50,7 +51,6 @@ class Data_Handler():
             self.min_price = row.Price
             self.df.loc[index, 'Transaction'] = 'S'
    
-            
         def add_column(self, data, name):
             self.df[name] = data
             

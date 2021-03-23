@@ -1,4 +1,5 @@
 from copy import deepcopy
+from utils import draw_downs
 import pandas as pd
 import numpy as np
 
@@ -10,6 +11,7 @@ class Strategies():
             self.rise_pct_threshold = rise_pct_threshold
             self.buy_pct = buy_pct
             self.sell_pct = sell_pct
+            self.strategies = []
             
         def distribution_and_fees(self, data, row, index):
             #Get capital gains at end of the day of relevant period.
@@ -35,6 +37,7 @@ class Strategies():
             self.fully_invested_strat()
             self.fully_invested_strat(reinvest = False)
             self.sell_high_buy_low_strat()
+            self.perfect_oracle()
             
         def add_extra_columns(self, data):
         
@@ -58,7 +61,6 @@ class Strategies():
             self.data.add_column(data.df['Capital_Gains_Tax'], strategy_name +'Capital_Gains_Tax')              
         
         def fully_invested_strat(self, strategy_name = 'fi', reinvest = True):
-        
             #Make copy to avoid changing attributes of original data object.
             data = deepcopy(self.data)
             data = self.add_extra_columns(data)
@@ -66,6 +68,8 @@ class Strategies():
             if reinvest != True:
                 strategy_name = strategy_name + '_no_reinvest'
                 
+            self.strategies.append(strategy_name)   
+            
             data.shares = np.floor(data.cash / data.min_price)
             investment = data.shares * data.min_price #Min price = initial price
             data.cash -= investment
@@ -91,6 +95,8 @@ class Strategies():
             #Make copy to avoid changing attributes of original data object.
             data = deepcopy(self.data)
             data = self.add_extra_columns(data)
+            
+            self.strategies.append(strategy_name)
             
             #Loop through rows
             for index, row in data.df.iterrows():
@@ -129,5 +135,41 @@ class Strategies():
             #Add new series to the original data object
             self.log_strategy(data, strategy_name)
             
-        
+        def perfect_oracle(self, strategy_name = 'o'):
                 
+            #Make copy to avoid changing attributes of original data object.
+            data = deepcopy(self.data)
+            data = self.add_extra_columns(data)
+            
+            self.strategies.append(strategy_name)
+            
+            peak_date = None
+            
+            #Fully invest on first date
+            first_row = data.df.iloc[0]
+            data.buy_stocks(0, first_row, 1)
+            
+            #Loop through rows
+            for index, row in data.df.iterrows():
+                                            
+                #Sell stocks at peak before drawdown.
+                if str(row.Date)[:10] in draw_downs.keys():
+                    data.sell_stocks(index, row, 1)
+                    peak_date = str(row.Date)[:10]
+                    
+                #Buy stocks at bottom  of drawdown.
+                if peak_date != None:
+                    if draw_downs[peak_date] == str(row.Date)[:10]:
+                        data.buy_stocks(index, row, 1)     
+                                            
+                self.distribution_and_fees(data, row, index)
+                    
+                #Update value for the day.    
+                value = data.cash + data.shares*row.Price
+                data.df.loc[index, strategy_name] = value
+                data.df.loc[index, 'Cash'] = data.cash
+                data.df.loc[index, 'Stock'] = data.shares*row.Price
+                       
+            #Add new series to the original data object
+            self.log_strategy(data, strategy_name)        
+            
